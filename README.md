@@ -1,72 +1,293 @@
-# Minimal AWS Java Pulumi Template
+# Pulumi Web Server Fleet
 
-This template provides a minimal Pulumi program written in Java that provisions an Amazon S3 bucket using the Pulumi AWS provider. It’s a great starting point for building AWS infrastructure with Pulumi and Java.
+A Java-based Pulumi `ComponentResource` that provides a reusable abstraction for provisioning a fleet of AWS EC2 web servers across multiple operating systems and machine sizes.
 
-## Providers
-- AWS (pulumi/aws)
+## What This Project Demonstrates
 
-## Resources
-- `aws.s3.BucketV2`: An S3 bucket resource.
+- Pulumi `ComponentResource` abstraction
+- AWS VPC and subnet networking
+- EC2 instance provisioning
+- Ubuntu and Amazon Linux support
+- Abstract machine sizes mapped to AWS instance types
+- OS-specific AMI selection
+- nginx installation through EC2 UserData
+- Distribution of instances across multiple subnets
+- Pulumi Outputs and resource dependencies
 
-## Outputs
-- `bucketName`: The name of the created S3 bucket.
+## Architecture
 
-## When to use this template
-Use this template if you:
-- Want a quick start with Pulumi in Java
-- Need an example of provisioning basic AWS resources
-- Are familiar with Maven and Java development
-
-## Prerequisites
-- Java Development Kit (JDK) 11 or later
-- Apache Maven
-- AWS credentials configured (via AWS CLI, environment variables, or shared credentials file)
-
-## Getting Started
-1. Create a new Pulumi project from this template:
-   ```bash
-   pulumi new aws-java
-   ```
-2. Follow the interactive prompts to set your project name, description, and AWS region (default: `us-east-1`).
-3. Change into your project directory:
-   ```bash
-   cd <project-name>
-   ```
-4. Deploy your stack:
-   ```bash
-   pulumi up
-   ```
-
-## Project Layout
+```text
+                         Internet
+                            |
+                    Internet Gateway
+                            |
+                 +----------+----------+
+                 |       AWS VPC       |
+                 |                     |
+          Public Subnet A       Public Subnet B
+                 |                     |
+              EC2 Fleet             EC2 Fleet
+                 |                     |
+          Ubuntu / Amazon Linux instances
+                            |
+                           nginx
 ```
-.
-├── Pulumi.yaml       # Pulumi project definition
-├── pom.xml           # Maven build configuration
+
+The developer-facing abstraction does not require knowledge of AWS AMI IDs or EC2 instance types. It accepts an operating system and abstract machine size, and the component maps those values to AWS-specific resources.
+
+## Example Usage
+
+```java
+var fleet = new WebServerFleet(
+    "customer-web-fleet",
+    new WebServerFleetArgs(
+        List.of(subnetA.id(), subnetB.id()),
+        List.of(
+            new MachineConfig(
+                OperatingSystem.UBUNTU,
+                MachineSize.SMALL,
+                3
+            ),
+            new MachineConfig(
+                OperatingSystem.AMAZON_LINUX,
+                MachineSize.MEDIUM,
+                2
+            )
+        ),
+        webSecurityGroup.id()
+    )
+);
+```
+
+This example provisions five EC2 instances:
+
+- 3 Ubuntu small instances
+- 2 Amazon Linux medium instances
+
+## Abstraction
+
+### Operating Systems
+
+```text
+UBUNTU       -> Ubuntu 24.04 LTS AMI
+AMAZON_LINUX -> Amazon Linux 2023 AMI
+```
+
+### Machine Sizes
+
+```text
+SMALL  -> t3.micro
+MEDIUM -> t3.small
+LARGE  -> t3.medium
+```
+
+The mappings are centralized in `AwsMachineMapper`, keeping AWS-specific implementation details out of the fleet interface.
+
+## Project Structure
+
+```text
+pulumi-web-server-fleet/
+├── Pulumi.yaml
+├── Pulumi.dev.yaml
+├── pom.xml
+├── README.md
+├── .gitignore
 └── src/
     └── main/
         └── java/
-            └── myproject/
-                └── App.java  # Pulumi program
+            └── com/
+                └── pulumi/
+                    └── webserverfleet/
+                        ├── App.java
+                        ├── AwsMachineMapper.java
+                        ├── MachineConfig.java
+                        ├── MachineSize.java
+                        ├── OperatingSystem.java
+                        ├── UserDataBuilder.java
+                        ├── WebServerFleet.java
+                        └── WebServerFleetArgs.java
 ```
 
-## Configuration
-This template supports the following configuration values:
-- `aws:region` (string) — AWS region to deploy into. Default: `us-east-1`.
+## Prerequisites
 
-View or set configuration values:
+- Java 21+
+- Apache Maven
+- Pulumi CLI
+- AWS CLI with valid AWS credentials
+- AWS account
+
+## Execute the Project
+
+Clone the repository:
+
 ```bash
-pulumi config
-pulumi config set aws:region us-west-2
+git clone https://github.com/animishv/pulumi-web-server-fleet.git
+cd pulumi-web-server-fleet
 ```
 
-## Next Steps
-- Enhance `App.java` by adding more AWS resources (EC2, RDS, VPC, etc.)
-- Explore the Pulumi AWS provider reference for available services and options
-- Integrate your Pulumi project into a CI/CD pipeline
+Authenticate with AWS using your normal AWS CLI authentication method:
 
-## Getting Help
-- Pulumi documentation: https://www.pulumi.com/docs/
-- AWS provider reference: https://www.pulumi.com/docs/reference/pkg/aws/
-- Pulumi Community Slack: https://slack.pulumi.com/
-- Stack Overflow (`pulumi` tag)
-- Report issues: https://github.com/pulumi/pulumi/issues
+```bash
+aws login
+```
+
+Verify that the CLI can access your AWS account:
+
+```bash
+aws sts get-caller-identity
+```
+
+Build the Java project:
+
+```bash
+mvn clean package
+```
+
+Select the Pulumi stack:
+
+```bash
+pulumi stack select dev
+```
+
+The project is configured for `us-east-1` in `Pulumi.dev.yaml`.
+
+Preview the infrastructure:
+
+```bash
+pulumi preview
+```
+
+Deploy the infrastructure:
+
+```bash
+pulumi up
+```
+
+Review the proposed changes and confirm with `yes`.
+
+After deployment, Pulumi exports:
+
+- EC2 instance IDs
+- Public IP addresses
+- VPC ID
+- Subnet IDs
+- Internet Gateway ID
+- Route table information
+- Security group ID
+
+View the stack outputs at any time with:
+
+```bash
+pulumi stack output
+```
+
+## Test the Created AWS Resources
+
+The example creates two EC2 instances for testing:
+
+- One Ubuntu `SMALL` instance
+- One Amazon Linux `MEDIUM` instance
+
+The instances receive public IP addresses and nginx is installed automatically through EC2 UserData.
+
+### 1. Get the public IP addresses
+
+```bash
+pulumi stack output publicIps
+```
+
+### 2. Test HTTP connectivity
+
+For each returned public IP:
+
+```bash
+curl -I http://<public-ip>
+```
+
+A successful response should contain:
+
+```text
+HTTP/1.1 200 OK
+Server: nginx
+```
+
+### 3. Verify the application page
+
+```bash
+curl http://<public-ip>
+```
+
+The Ubuntu instance should return content similar to:
+
+```html
+<h1>Hello from Ubuntu!</h1>
+<p>Provisioned by Pulumi WebServerFleet.</p>
+```
+
+The Amazon Linux instance returns an equivalent page identifying Amazon Linux.
+
+### 4. Test from a browser
+
+Open:
+
+```text
+http://<public-ip>
+```
+
+The nginx-generated page should be displayed.
+
+### 5. Verify resources in AWS
+
+The deployment can also be inspected through the AWS Console. The stack creates:
+
+- 1 VPC
+- 2 public subnets
+- 1 Internet Gateway
+- 1 route table
+- 2 route table associations
+- 1 security group
+- EC2 instances defined by the fleet configuration
+
+## Cleanup
+
+The test resources incur AWS charges while they exist. Destroy them when testing is complete:
+
+```bash
+pulumi destroy
+```
+
+Confirm with `yes`.
+
+Verify that the stack no longer has deployed resources:
+
+```bash
+pulumi stack
+```
+
+## Design Notes
+
+### Why a ComponentResource?
+
+`WebServerFleet` groups multiple underlying AWS resources behind a single reusable abstraction. Consumers specify what they want rather than how each EC2 instance should be created.
+
+### Why abstract OS and machine size?
+
+The application-facing configuration should not need to know AWS-specific AMI IDs or EC2 instance type names. Those implementation details are isolated in `AwsMachineMapper`.
+
+### Networking
+
+The example creates a minimal AWS VPC with two public subnets, an Internet Gateway, route table, and security group. EC2 instances are distributed across the supplied subnets.
+
+### State
+
+Pulumi manages the infrastructure state for the `dev` stack. The local `.pulumi/` directory is excluded from Git, and the stack's non-secret AWS region configuration is stored in `Pulumi.dev.yaml`.
+
+## Technologies
+
+- Java
+- Maven
+- Pulumi
+- Pulumi AWS Provider
+- Amazon VPC
+- Amazon EC2
+- nginx
