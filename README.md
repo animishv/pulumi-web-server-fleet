@@ -252,16 +252,22 @@ The deployment can also be inspected through the AWS Console. The stack creates:
 
 ### Ubuntu AWS
 <img width="1722" height="872" alt="UbuntuAWS" src="https://github.com/user-attachments/assets/b9d54eed-c4e6-4323-8e2d-ee05eaa1a112" />
+
 ### Ubuntu Instance Running
 <img width="666" height="142" alt="Ubuntu Instance" src="https://github.com/user-attachments/assets/a648b0f4-4707-4a7f-ab2d-027fe9413cff" />
+
 ### pulumi preview
 <img width="942" height="539" alt="pulumi_preview" src="https://github.com/user-attachments/assets/454b915a-0de2-41d3-af3f-b871fdd3f329" />
+
 ### pulumi up
 <img width="890" height="886" alt="Pulumi up" src="https://github.com/user-attachments/assets/14640eb8-aa09-46b8-b0fa-359f6ef6b424" />
+
 ### Pulumi Console
 <img width="1717" height="813" alt="Pulumi Console" src="https://github.com/user-attachments/assets/85634997-ab96-4c57-a32e-2346eed30629" />
+
 ### AWS EC2 Console
 <img width="662" height="135" alt="EC2 Instance" src="https://github.com/user-attachments/assets/1f08c379-ee6a-4228-adc6-f342ccf8d94e" />
+
 ### Amazon Medium AWS
 <img width="1724" height="871" alt="AmazonMediumAWS" src="https://github.com/user-attachments/assets/87772295-8a3a-488a-a0da-d17cd07e7e80" />
 
